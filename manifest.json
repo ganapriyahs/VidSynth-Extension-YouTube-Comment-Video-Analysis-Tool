@@ -1,0 +1,23 @@
+{
+  "manifest_version": 3,
+  "name": "VidSynth - YouTube Summarizer",
+  "version": "1.0",
+  "description": "Summarize YouTube videos and comments using an API running on localhost.",
+  "permissions": ["activeTab", "scripting"],
+  "host_permissions": [
+    "http://127.0.0.1:8000/*",
+    "http://localhost:8000/*"
+  ],
+  "action": {
+    "default_popup": "popup.html"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "*://*.youtube.com/*",
+        "*://youtube.com/*"
+      ],
+      "js": ["content.js"]
+    }
+  ]
+}
