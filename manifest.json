@@ -2,21 +2,27 @@
   "manifest_version": 3,
   "name": "VidSynth - YouTube Summarizer",
   "version": "1.0",
-  "description": "Summarize YouTube videos and comments using an API running on localhost.",
-  "permissions": ["activeTab", "scripting"],
-  "host_permissions": [
-    "http://127.0.0.1:8000/*",
-    "http://localhost:8000/*"
+  "description": "Summarize YouTube videos using the VidSynth Cloud Pipeline.",
+  "permissions": [
+    "activeTab",
+    "scripting",
+    "storage",
+    "alarms"
   ],
+  "host_permissions": [
+    "https://*.run.app/*",
+    "https://www.youtube.com/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
   "action": {
-    "default_popup": "popup.html"
+    "default_popup": "popup.html",
+    "default_icon": "icon.png"
   },
   "content_scripts": [
     {
-      "matches": [
-        "*://*.youtube.com/*",
-        "*://youtube.com/*"
-      ],
+      "matches": ["*://*.youtube.com/*"],
       "js": ["content.js"]
     }
   ]
