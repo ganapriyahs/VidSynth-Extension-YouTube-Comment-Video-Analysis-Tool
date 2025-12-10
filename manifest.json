@@ -1,13 +1,14 @@
 {
   "manifest_version": 3,
-  "name": "VidSynth - YouTube Summarizer",
-  "version": "1.0",
-  "description": "Summarize YouTube videos using the VidSynth Cloud Pipeline.",
+  "name": "VidSynth",
+  "version": "2.3",
+  "description": "Professional AI analysis pipeline for YouTube content.",
   "permissions": [
     "activeTab",
     "scripting",
     "storage",
-    "alarms"
+    "sidePanel",
+    "alarms" 
   ],
   "host_permissions": [
     "https://*.run.app/*",
@@ -17,8 +18,11 @@
     "service_worker": "background.js"
   },
   "action": {
-    "default_popup": "popup.html",
+    "default_title": "Open Analyst Panel",
     "default_icon": "icon.png"
+  },
+  "side_panel": {
+    "default_path": "side_panel.html"
   },
   "content_scripts": [
     {

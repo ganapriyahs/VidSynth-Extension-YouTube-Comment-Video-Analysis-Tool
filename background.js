@@ -1,80 +1,151 @@
 // REPLACE WITH YOUR GATEWAY URL
-const GATEWAY_BASE = "YOUR_GATEWAY_URL"
-// Listen for messages from popup
+const GATEWAY_BASE = "YOUR_GATEWAY_URL"; 
+
+// 1. Open Side Panel
+chrome.action.onClicked.addListener((tab) => {
+  if (chrome.sidePanel && chrome.sidePanel.open) {
+    chrome.sidePanel.open({ windowId: tab.windowId });
+  }
+});
+
+// 2. Handle Messages
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+  
+  // --- AUTHENTICATION ACTIONS ---
+  if (request.action === "SEND_AUTH_CODE") {
+    sendAuthCode(request.email).then(sendResponse);
+    return true; 
+  }
+  if (request.action === "VERIFY_AUTH_CODE") {
+    verifyAuthCode(request.email, request.code).then(sendResponse);
+    return true; 
+  }
+
+  // --- PIPELINE ACTIONS ---
   if (request.action === "START_PIPELINE") {
-    startPipeline(request.videoId);
+    startPipeline(request.videoId, request.userEmail); 
     sendResponse({ status: "started" });
   }
   if (request.action === "CHECK_STATUS") {
-    checkResult(request.videoId); // Manual check
+    checkResult(request.videoId);
     sendResponse({ status: "checking" });
   }
   if (request.action === "RESET") {
-    chrome.storage.local.clear();
-    sendResponse({ status: "cleared" });
+    chrome.storage.local.get("userEmail", (data) => {
+      const email = data.userEmail;
+      chrome.storage.local.clear(() => {
+        if (email) chrome.storage.local.set({ userEmail: email }); 
+        chrome.alarms.clearAll();
+        sendResponse({ status: "cleared" });
+      });
+    });
+    return true;
   }
+
+  // --- NEW: HISTORY ACTION ---
+  if (request.action === "GET_HISTORY") {
+    fetch(`${GATEWAY_BASE}/history?email=${request.email}`)
+      .then(res => res.json())
+      .then(data => sendResponse(data))
+      .catch(() => sendResponse({ history: [] }));
+    return true;
+  }
+
   return true;
 });
 
-async function startPipeline(videoId) {
+// 3. Auto-Refresh Alarm
+chrome.alarms.onAlarm.addListener((alarm) => {
+  if (alarm.name.startsWith("poll_")) {
+    const videoId = alarm.name.split("_")[1];
+    checkResult(videoId);
+  }
+});
+
+// --- AUTHENTICATION IMPLEMENTATION ---
+async function sendAuthCode(email) {
+    try {
+        const response = await fetch(`${GATEWAY_BASE}/auth/send`, { 
+            method: "POST", 
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email })
+        });
+        const data = await response.json();
+        return { success: response.ok, message: data.message };
+    } catch (err) {
+        return { success: false, message: "Network error. Check Gateway URL." };
+    }
+}
+
+async function verifyAuthCode(email, code) {
+    try {
+        const response = await fetch(`${GATEWAY_BASE}/auth/verify`, {
+            method: "POST", 
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email, code })
+        });
+        const data = await response.json();
+        return { success: response.ok && data.verified, message: data.message };
+    } catch (err) {
+        return { success: false, message: "Network error. Check Gateway URL." };
+    }
+}
+
+// --- PIPELINE IMPLEMENTATION ---
+async function startPipeline(videoId, userEmail) {
   try {
-    // 1. Trigger Gateway
-    await updateStatus("loading", "Connecting to Cloud...", videoId);
+    await updateStatus("loading", "⏳ Connecting to Pipeline...", videoId);
     
     const response = await fetch(`${GATEWAY_BASE}/summarize`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ video_id: videoId })
+      body: JSON.stringify({ video_id: videoId, user_email: userEmail }) 
     });
 
     if (!response.ok) throw new Error(`Gateway Error: ${response.status}`);
     
-    await updateStatus("loading", "Pipeline Started! Checking for results...", videoId);
-
-    // 2. Start Polling
-    startPolling(videoId);
+    await updateStatus("loading", "🚀 Analyzing Video Content...", videoId);
+    
+    chrome.alarms.create(`poll_${videoId}`, { periodInMinutes: 0.1 });
 
   } catch (err) {
     console.error(err);
-    await updateStatus("error", "Failed to start: " + err.message, videoId);
+    await updateStatus("error", "❌ Connection Failed: " + err.message, videoId);
   }
 }
 
-function startPolling(videoId) {
-  const startTime = Date.now();
-  
-  // Poll every 10 seconds
-  const intervalId = setInterval(async () => {
-    // Stop after 15 mins
-    if (Date.now() - startTime > 900000) {
-      clearInterval(intervalId);
-      await updateStatus("error", "Timed out. Click 'Refresh' to try again.", videoId);
-      return;
-    }
-    
-    await checkResult(videoId, intervalId);
-  }, 10000);
-}
-
-async function checkResult(videoId, intervalId = null) {
+async function checkResult(videoId) {
   try {
     const response = await fetch(`${GATEWAY_BASE}/result/${videoId}`);
     const json = await response.json();
 
-    if (json.status === "ready") {
-      if (intervalId) clearInterval(intervalId); // Stop polling
+    // Check if the job is done
+    if (json.status === "ready" || json.video_summary || (json.data && json.data.video_summary)) {
       
-      // SAVE RESULT TO STORAGE
+      chrome.alarms.clear(`poll_${videoId}`);
+      
+      let v_sum = "Summary unavailable.";
+      let c_sum = "Sentiment unavailable.";
+
+      // Robust Parsing Logic
+      if (json.data && json.data.video_summary) {
+        v_sum = json.data.video_summary;
+        c_sum = json.data.comment_summary;
+      } 
+      else if (json.video_summary) {
+        v_sum = json.video_summary;
+        c_sum = json.comment_summary;
+      }
+
       await chrome.storage.local.set({
-        status: "success",
-        video_summary: json.data.video_summary,
-        comment_summary: json.data.comment_summary,
+        status: "results",
+        video_summary: v_sum,
+        comment_summary: c_sum,
         videoId: videoId
       });
     }
   } catch (e) {
-    console.error("Check failed:", e);
+    console.error("Polling error", e);
   }
 }
 

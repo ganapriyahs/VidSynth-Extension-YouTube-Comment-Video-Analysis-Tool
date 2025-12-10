@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>VidSynth</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <div class="bg-shape shape-1"></div>
+  <div class="bg-shape shape-2"></div>
+
+  <div class="shell">
+    <div class="header">
+      <div class="title-left">
+        <img src="icon.png" class="logo-img" alt="Logo">
+        <div class="title-text">
+          <h3>VidSynth</h3>
+        </div>
+      </div>
+      <div class="badge pulsing">LIVE</div>
+    </div>
+
+    <div class="subtitle">
+      <span class="subtitle-icon">📺</span>
+      <span>Video & Sentiment Summarizer</span>
+    </div>
+
+    <div id="loginSection" class="hidden">
+      <div class="hero-anim">
+        <div class="hero-icon">📧</div>
+      </div>
+      <div class="subtitle" style="margin-bottom: 10px; justify-content: center;">
+        Login Required
+      </div>
+      <input type="email" id="emailInput" placeholder="Enter your verified email" class="input-field">
+      <div id="emailError" class="error-msg hidden" style="margin: 5px 0 10px;"></div>
+      <button id="sendCodeBtn" class="glow-effect" style="margin-top: 10px;">
+        <span class="label">Send Verification Code</span>
+      </button>
+    </div>
+
+    <div id="codeSection" class="hidden">
+      <div class="subtitle" style="margin-bottom: 10px; justify-content: center;">
+        <span id="codeInstruction">Enter the 6-digit code sent to your email.</span>
+      </div>
+      <input type="text" id="codeInput" placeholder="6-digit code" maxlength="6" class="input-field" style="text-align: center;">
+      <div id="codeError" class="error-msg hidden" style="margin: 5px 0 10px;"></div>
+      <button id="verifyCodeBtn" class="glow-effect" style="margin-top: 10px;">
+        <span class="label">Verify & Continue</span>
+      </button>
+      <button id="resendCodeBtn" style="margin-top: 10px; background: none; color: var(--text-subtle);">Resend Code</button>
+    </div>
+    
+    <div id="startSection">
+      <div class="hero-anim">
+        <div class="hero-icon">🤖</div>
+      </div>
+      
+      <button id="startBtn" class="glow-effect">
+        <span class="sparkle">✨</span>
+        <span class="label">Start Analysis</span>
+      </button>
+    </div>
+
+    <div id="loadingSection" class="status-box hidden">
+      <div class="loader"></div>
+      <div id="loadingText" class="status-text blink">Connecting...</div>
+    </div>
+
+    <div id="resultsSection" class="hidden">
+      <div class="card">
+        <div class="card-header">
+          <span>📝</span> Video Summary
+        </div>
+        <div class="card-body" id="videoBody"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <span>💬</span> Viewer Sentiment
+        </div>
+        <div class="card-body" id="commentBody"></div>
+      </div>
+    </div>
+    
+    <div id="historySection" class="hidden">
+      <div class="subtitle" style="justify-content: center; margin-bottom: 15px;">
+        <span>📜 Recent Analysis History</span>
+      </div>
+      <div id="historyList" class="history-list">
+        </div>
+      <button id="backFromHistoryBtn" style="margin-top: 15px; background: rgba(255,255,255,0.1);">Back</button>
+    </div>
+
+    <div id="errorSection" class="status-box hidden">
+      <div style="font-size: 28px; margin-bottom: 5px;">⚠️</div>
+      <div id="errorText" class="error-msg">Error occurred</div>
+    </div>
+
+    <div id="controls" class="controls hidden">
+      <button id="refreshBtn"><span>🔄</span> Refresh</button>
+      <button id="historyBtn"><span>📜</span> History</button>
+      <button id="resetBtn"><span>✨</span> New</button>
+      <button id="logoutBtn"><span>🚪</span> Logout</button>
+    </div>
+
+    <div class="footer">
+      <span class="footer-icon"></span>
+      <span class="footer-pill">Cloud Run Pipeline</span>
+    </div>
+  </div>
+
+  <script src="side_panel.js"></script>
+</body>
+</html>

@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VidSynth Admin Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root { --bg: #0f172a; --card: #1e293b; --text: #f8fafc; --accent: #22c1c3; --primary: #4f46e5; }
+        body { background-color: var(--bg); color: var(--text); font-family: system-ui, -apple-system, sans-serif; padding: 40px; }
+        .container { max-width: 1000px; margin: 0 auto; }
+        
+        /* Stats Cards */
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 30px; }
+        .card { background: var(--card); padding: 25px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1); text-align: center; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .number { font-size: 3rem; font-weight: bold; color: var(--accent); margin: 10px 0; }
+        .label { color: #94a3b8; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 1px; }
+
+        /* Chart Section */
+        .chart-container {
+            background: var(--card);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 40px;
+            height: 400px;
+            position: relative;
+        }
+
+        /* User Table */
+        h3 { color: var(--accent); border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 10px; margin-top: 40px; }
+        table { width: 100%; border-collapse: collapse; background: var(--card); border-radius: 12px; overflow: hidden; margin-top: 20px; }
+        th, td { padding: 16px; text-align: left; border-bottom: 1px solid rgba(255,255,255,0.05); }
+        th { background: rgba(0,0,0,0.3); color: var(--accent); font-weight: 600; text-transform: uppercase; font-size: 0.85rem; letter-spacing: 0.5px; }
+        tr:hover { background: rgba(255,255,255,0.03); }
+        
+        .error { color: #ef4444; background: rgba(239, 68, 68, 0.1); padding: 15px; border-radius: 8px; margin-bottom: 20px; display: none; }
+        .header-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }
+        .refresh-btn { background: var(--accent); color: #0f172a; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="header-row">
+        <h1>Admin Dashboard <span style="font-size: 14px; opacity: 0.7; font-weight: normal;">(Live)</span></h1>
+        <button onclick="fetchStats()" class="refresh-btn">🔄 Refresh</button>
+    </div>
+
+    <div id="errorMsg" class="error"></div>
+
+    <div class="grid">
+        <div class="card">
+            <div class="label">Total Users</div>
+            <div class="number" id="totalUsers">-</div>
+        </div>
+        <div class="card">
+            <div class="label">Total Summaries</div>
+            <div class="number" id="totalSummaries">-</div>
+        </div>
+    </div>
+
+    <div class="chart-container">
+        <canvas id="activityChart"></canvas>
+    </div>
+
+    <h3>User Activity Log</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>User Email</th>
+                <th>Summaries Generated</th>
+                <th>Last Activity</th>
+            </tr>
+        </thead>
+        <tbody id="userTable">
+            <tr><td colspan="3" style="text-align:center; padding: 30px; color: #94a3b8;">Loading data...</td></tr>
+        </tbody>
+    </table>
+</div>
+
+<script>
+    const GATEWAY_URL = "https://vidsynth-gateway-563473815527.us-central1.run.app"; 
+    let activityChart = null; // Store chart instance
+
+    async function fetchStats() {
+        const errorEl = document.getElementById('errorMsg');
+        const table = document.getElementById('userTable');
+        
+        try {
+            const res = await fetch(`${GATEWAY_URL}/admin/stats`);
+            if (!res.ok) throw new Error("Failed to connect to Gateway.");
+            
+            const data = await res.json();
+            errorEl.style.display = 'none';
+
+            // 1. Update Cards
+            document.getElementById('totalUsers').innerText = data.total_users;
+            document.getElementById('totalSummaries').innerText = data.total_summaries;
+
+            // 2. Sort Data (Top active users first)
+            data.users.sort((a, b) => b.summary_count - a.summary_count);
+
+            // 3. Update Chart
+            updateChart(data.users);
+
+            // 4. Update Table
+            table.innerHTML = "";
+            if(data.users.length === 0) {
+                 table.innerHTML = '<tr><td colspan="3" style="text-align:center; padding: 30px;">No users found.</td></tr>';
+                 return;
+            }
+
+            data.users.forEach(user => {
+                table.innerHTML += `
+                    <tr>
+                        <td><strong>${user.email}</strong></td>
+                        <td>${user.summary_count}</td>
+                        <td style="color: #94a3b8; font-family: monospace;">${user.last_activity}</td>
+                    </tr>
+                `;
+            });
+
+        } catch (err) {
+            console.error(err);
+            errorEl.style.display = 'block';
+            errorEl.textContent = "Error: " + err.message;
+        }
+    }
+
+    function updateChart(users) {
+        const ctx = document.getElementById('activityChart').getContext('2d');
+        
+        // Prepare Data (Top 10 users only to keep graph clean)
+        const topUsers = users.slice(0, 10); 
+        const labels = topUsers.map(u => u.email.split('@')[0]); // Show only name part
+        const counts = topUsers.map(u => u.summary_count);
+
+        if (activityChart) {
+            activityChart.data.labels = labels;
+            activityChart.data.datasets[0].data = counts;
+            activityChart.update();
+        } else {
+            activityChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Summaries Generated',
+                        data: counts,
+                        backgroundColor: 'rgba(34, 193, 195, 0.6)', // Accent Color
+                        borderColor: '#22c1c3',
+                        borderWidth: 1,
+                        borderRadius: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { labels: { color: '#f8fafc' } }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            grid: { color: 'rgba(255,255,255,0.1)' },
+                            ticks: { color: '#94a3b8', stepSize: 1 }
+                        },
+                        x: {
+                            grid: { display: false },
+                            ticks: { color: '#94a3b8' }
+                        }
+                    }
+                }
+            });
+        }
+    }
+
+    // Initial Load & Auto-Refresh loop
+    fetchStats();
+    setInterval(fetchStats, 5000); 
+</script>
+
+</body>
+</html>
