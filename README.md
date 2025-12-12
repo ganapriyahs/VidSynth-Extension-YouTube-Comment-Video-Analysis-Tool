@@ -3,12 +3,6 @@
 **Watch the Demo Video:**
 [![VidSynth Demo](https://img.youtube.com/vi/EaZHgtlxTGY/0.jpg)](https://www.youtube.com/watch?v=EaZHgtlxTGY)
 
-## Flowchart
-<p align="center">
-  <img src="BrainStorming_Documentation/flowchart01.png" alt="Flowchart" style="max-width: 100%;">
-  <img src="BrainStorming_Documentation/flowchart02.png" alt="Flowchart" style="max-width: 100%;">
-</p>
-
 # VidSynth Chrome Extension
 
 This is the client-side browser extension for **VidSynth**, an AI-powered YouTube video and sentiment analysis tool built by **Group 7**.
